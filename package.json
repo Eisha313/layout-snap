@@ -1,25 +1,46 @@
 {
-	"name": "layout-snap",
-	"version": "1.0.0",
-	"description": "A lightweight JavaScript library for generating responsive CSS Grid and Flexbox layouts from simple configuration objects",
-	"main": "src/index.js",
-	"type": "module",
-	"scripts": {
-		"test": "node --test",
-		"lint": "eslint src/",
-		"dev": "node examples/demo.js"
-	},
-	"keywords": [
-		"css",
-		"grid",
-		"flexbox",
-		"layout",
-		"responsive",
-		"generator"
-	],
-	"author": "",
-	"license": "MIT",
-	"devDependencies": {
-		"eslint": "^8.57.0"
-	}
+  "name": "layout-snap",
+  "version": "0.1.0",
+  "description": "A lightweight JavaScript library for generating responsive CSS Grid and Flexbox layouts from simple configuration objects",
+  "main": "dist/layout-snap.cjs.js",
+  "module": "dist/layout-snap.esm.js",
+  "browser": "dist/layout-snap.umd.js",
+  "types": "dist/index.d.ts",
+  "files": [
+    "dist",
+    "src"
+  ],
+  "scripts": {
+    "build": "rollup -c",
+    "dev": "rollup -c -w",
+    "lint": "eslint src/",
+    "lint:fix": "eslint src/ --fix",
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "prepublishOnly": "npm run build"
+  },
+  "keywords": [
+    "css",
+    "grid",
+    "flexbox",
+    "layout",
+    "responsive",
+    "generator"
+  ],
+  "author": "",
+  "license": "MIT",
+  "devDependencies": {
+    "@rollup/plugin-commonjs": "^25.0.7",
+    "@rollup/plugin-node-resolve": "^15.2.3",
+    "@rollup/plugin-terser": "^0.4.4",
+    "eslint": "^8.56.0",
+    "rollup": "^4.9.6"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/user/layout-snap.git"
+  },
+  "bugs": {
+    "url": "https://github.com/user/layout-snap/issues"
+  },
+  "homepage": "https://github.com/user/layout-snap#readme"
 }
