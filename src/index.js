@@ -1,51 +1,48 @@
 /**
- * layout-snap - Lightweight CSS Grid and Flexbox layout generator
- * @module layout-snap
+ * layout-snap
+ * A lightweight JavaScript library for generating responsive CSS Grid and Flexbox layouts
  */
 
-export { generateGridCSS, generateFlexCSS, generateLayoutCSS } from './generators.js';
-export { presets, getPreset, registerPreset } from './presets.js';
+import { generateGridCSS, generateFlexboxCSS, generateLayoutCSS } from './generators.js';
+import { presets, getPreset, registerPreset } from './presets.js';
+import { createBreakpoints, injectBreakpoints, defaultBreakpoints } from './breakpoints.js';
+import { createPreview, quickPreview, LivePreview } from './preview.js';
+
+// Main API
 export {
+  // Generators
+  generateGridCSS,
+  generateFlexboxCSS,
+  generateLayoutCSS,
+  
+  // Presets
+  presets,
+  getPreset,
+  registerPreset,
+  
+  // Breakpoints
   createBreakpoints,
-  getMediaQuery,
-  generateResponsiveCSS,
-  injectCSS,
-  removeCSS,
-  DEFAULT_BREAKPOINTS
-} from './breakpoints.js';
+  injectBreakpoints,
+  defaultBreakpoints,
+  
+  // Live Preview
+  createPreview,
+  quickPreview,
+  LivePreview
+};
 
-/**
- * Create a complete layout with responsive support
- * @param {Object} config - Layout configuration
- * @param {Object} options - Additional options
- * @returns {Object} Generated CSS and utility functions
- */
-export function createLayout(config, options = {}) {
-  const {
-    inject = false,
-    id = 'layout-snap-' + Date.now()
-  } = options;
-
-  const { generateLayoutCSS } = require('./generators.js');
-  const { injectCSS, removeCSS } = require('./breakpoints.js');
-
-  const css = generateLayoutCSS(config);
-
-  if (inject && typeof document !== 'undefined') {
-    injectCSS(css, id);
-  }
-
-  return {
-    css,
-    id,
-    inject: () => injectCSS(css, id),
-    remove: () => removeCSS(id),
-    update: (newConfig) => {
-      const newCSS = generateLayoutCSS(newConfig);
-      if (inject) {
-        injectCSS(newCSS, id);
-      }
-      return newCSS;
-    }
-  };
-}
+// Default export with all utilities
+export default {
+  generateGridCSS,
+  generateFlexboxCSS,
+  generateLayoutCSS,
+  presets,
+  getPreset,
+  registerPreset,
+  createBreakpoints,
+  injectBreakpoints,
+  defaultBreakpoints,
+  createPreview,
+  quickPreview,
+  LivePreview
+};
