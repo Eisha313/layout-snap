@@ -2,99 +2,174 @@
  * CSS generators for Grid and Flexbox layouts
  */
 
+import { validateConfig, sanitizeCSSValue, toKebabCase } from './utils.js';
+
 /**
- * Generate CSS Grid styles from configuration
- * @param {string} className - Base class name
+ * Generates CSS Grid styles from configuration
  * @param {Object} config - Grid configuration
- * @param {Object} breakpoints - Responsive breakpoints
  * @returns {string} Generated CSS
  */
-export function generateGridCSS(className, config, breakpoints) {
-	const {
-		columns = 'repeat(12, 1fr)',
-		rows = 'auto',
-		gap = '1rem',
-		alignItems = 'stretch',
-		justifyItems = 'stretch',
-		minHeight,
-		padding,
-		areas
-	} = config;
-
-	let css = `.${className} {
-	display: grid;
-	grid-template-columns: ${columns};
-	grid-template-rows: ${rows};
-	gap: ${gap};
-	align-items: ${alignItems};
-	justify-items: ${justifyItems};`;
-
-	if (minHeight) css += `\n\tmin-height: ${minHeight};`;
-	if (padding) css += `\n\tpadding: ${padding};`;
-	if (areas) css += `\n\tgrid-template-areas: ${areas};`;
-	
-	css += '\n}\n';
-
-	// Generate item styles
-	css += `.${className}-item {
-	box-sizing: border-box;
-}\n`;
-
-	return css;
+export function generateGrid(config) {
+  const validated = validateConfig({ ...config, type: 'grid' });
+  const { columns, gap, areas, className = 'layout-grid' } = validated;
+  
+  let css = `.${className} {\n`;
+  css += `  display: grid;\n`;
+  css += `  grid-template-columns: repeat(${sanitizeCSSValue(columns)}, 1fr);\n`;
+  css += `  gap: ${sanitizeCSSValue(gap)};\n`;
+  
+  if (areas) {
+    const areasStr = areas.map(row => `"${sanitizeCSSValue(row)}"`).join('\n    ');
+    css += `  grid-template-areas:\n    ${areasStr};\n`;
+  }
+  
+  css += `}\n`;
+  
+  // Generate item styles
+  if (validated.items && validated.items.length > 0) {
+    css += generateItemStyles(validated.items, className);
+  }
+  
+  return css;
 }
 
 /**
- * Generate Flexbox styles from configuration
- * @param {string} className - Base class name
- * @param {Object} config - Flex configuration
- * @param {Object} breakpoints - Responsive breakpoints
+ * Generates CSS Flexbox styles from configuration
+ * @param {Object} config - Flexbox configuration
  * @returns {string} Generated CSS
  */
-export function generateFlexCSS(className, config, breakpoints) {
-	const {
-		direction = 'row',
-		wrap = 'wrap',
-		justifyContent = 'flex-start',
-		alignItems = 'stretch',
-		gap = '1rem',
-		minHeight,
-		padding
-	} = config;
-
-	let css = `.${className} {
-	display: flex;
-	flex-direction: ${direction};
-	flex-wrap: ${wrap};
-	justify-content: ${justifyContent};
-	align-items: ${alignItems};
-	gap: ${gap};`;
-
-	if (minHeight) css += `\n\tmin-height: ${minHeight};`;
-	if (padding) css += `\n\tpadding: ${padding};`;
-	
-	css += '\n}\n';
-
-	// Generate item styles
-	css += `.${className}-item {
-	box-sizing: border-box;
-	flex: 0 1 auto;
-}\n`;
-
-	return css;
+export function generateFlex(config) {
+  const validated = validateConfig({ ...config, type: 'flex' });
+  const { 
+    direction = 'row', 
+    wrap = 'wrap', 
+    justify = 'flex-start', 
+    align = 'stretch',
+    gap,
+    className = 'layout-flex' 
+  } = validated;
+  
+  let css = `.${className} {\n`;
+  css += `  display: flex;\n`;
+  css += `  flex-direction: ${sanitizeCSSValue(direction)};\n`;
+  css += `  flex-wrap: ${sanitizeCSSValue(wrap)};\n`;
+  css += `  justify-content: ${sanitizeCSSValue(justify)};\n`;
+  css += `  align-items: ${sanitizeCSSValue(align)};\n`;
+  css += `  gap: ${sanitizeCSSValue(gap)};\n`;
+  css += `}\n`;
+  
+  // Generate item styles
+  if (validated.items && validated.items.length > 0) {
+    css += generateFlexItemStyles(validated.items, className);
+  }
+  
+  return css;
 }
 
 /**
- * Generate auto-responsive grid that adapts to container width
- * @param {string} className - Base class name
- * @param {Object} config - Configuration with minItemWidth
+ * Generates styles for grid items
+ * @param {Array} items - Item configurations
+ * @param {string} parentClass - Parent class name
  * @returns {string} Generated CSS
  */
-export function generateAutoResponsiveGrid(className, config) {
-	const { minItemWidth = '250px', gap = '1rem' } = config;
+function generateItemStyles(items, parentClass) {
+  let css = '';
+  
+  items.forEach((item, index) => {
+    const itemClass = item.className || `${parentClass}-item-${index + 1}`;
+    css += `\n.${itemClass} {\n`;
+    
+    if (item.area) {
+      css += `  grid-area: ${sanitizeCSSValue(item.area)};\n`;
+    }
+    if (item.column) {
+      css += `  grid-column: ${sanitizeCSSValue(item.column)};\n`;
+    }
+    if (item.row) {
+      css += `  grid-row: ${sanitizeCSSValue(item.row)};\n`;
+    }
+    
+    // Add custom styles
+    if (item.styles) {
+      css += generateCustomStyles(item.styles);
+    }
+    
+    css += `}\n`;
+  });
+  
+  return css;
+}
 
-	return `.${className} {
-	display: grid;
-	grid-template-columns: repeat(auto-fit, minmax(${minItemWidth}, 1fr));
-	gap: ${gap};
-}\n`;
+/**
+ * Generates styles for flex items
+ * @param {Array} items - Item configurations
+ * @param {string} parentClass - Parent class name
+ * @returns {string} Generated CSS
+ */
+function generateFlexItemStyles(items, parentClass) {
+  let css = '';
+  
+  items.forEach((item, index) => {
+    const itemClass = item.className || `${parentClass}-item-${index + 1}`;
+    css += `\n.${itemClass} {\n`;
+    
+    if (item.flex) {
+      css += `  flex: ${sanitizeCSSValue(item.flex)};\n`;
+    }
+    if (item.basis) {
+      css += `  flex-basis: ${sanitizeCSSValue(item.basis)};\n`;
+    }
+    if (item.grow !== undefined) {
+      css += `  flex-grow: ${sanitizeCSSValue(item.grow)};\n`;
+    }
+    if (item.shrink !== undefined) {
+      css += `  flex-shrink: ${sanitizeCSSValue(item.shrink)};\n`;
+    }
+    if (item.order !== undefined) {
+      css += `  order: ${sanitizeCSSValue(item.order)};\n`;
+    }
+    
+    // Add custom styles
+    if (item.styles) {
+      css += generateCustomStyles(item.styles);
+    }
+    
+    css += `}\n`;
+  });
+  
+  return css;
+}
+
+/**
+ * Generates custom CSS properties from an object
+ * @param {Object} styles - Style object
+ * @returns {string} Generated CSS properties
+ */
+function generateCustomStyles(styles) {
+  let css = '';
+  
+  for (const [prop, value] of Object.entries(styles)) {
+    const cssProp = toKebabCase(prop);
+    css += `  ${cssProp}: ${sanitizeCSSValue(value)};\n`;
+  }
+  
+  return css;
+}
+
+/**
+ * Main generator function that routes to appropriate generator
+ * @param {Object} config - Layout configuration
+ * @returns {string} Generated CSS
+ */
+export function generate(config) {
+  const validated = validateConfig(config);
+  
+  switch (validated.type) {
+    case 'grid':
+      return generateGrid(validated);
+    case 'flex':
+      return generateFlex(validated);
+    default:
+      throw new Error(`Unknown layout type: ${validated.type}`);
+  }
 }
