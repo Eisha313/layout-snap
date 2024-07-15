@@ -1,76 +1,71 @@
 /**
- * Utility functions for layout-snap
+ * @module utils
+ * @description Utility functions for layout-snap library
  */
 
 /**
- * Validates that a value is a non-empty string
- * @param {*} value - Value to validate
- * @param {string} name - Name of the parameter for error messages
- * @returns {boolean}
+ * Counter for generating unique class names
+ * @type {number}
+ * @private
  */
-export function isValidString(value, name = 'value') {
-  if (typeof value !== 'string' || value.trim() === '') {
-    return false;
-  }
-  return true;
+let classCounter = 0;
+
+/**
+ * Generates a unique class name with an optional prefix
+ * @param {string} [prefix='ls'] - Prefix for the class name
+ * @returns {string} Unique class name in format 'prefix-counter'
+ * @example
+ * generateClassName('grid'); // Returns 'ls-grid-1'
+ * generateClassName('flex'); // Returns 'ls-flex-2'
+ */
+export function generateClassName(prefix = 'ls') {
+  classCounter++;
+  return `ls-${prefix}-${classCounter}`;
 }
 
 /**
- * Validates layout configuration object
- * @param {Object} config - Configuration to validate
- * @throws {Error} If configuration is invalid
- * @returns {Object} Validated and normalized config
+ * Resets the class name counter (primarily for testing)
+ * @returns {void}
  */
-export function validateConfig(config) {
-  if (!config || typeof config !== 'object') {
-    throw new Error('Configuration must be a non-null object');
-  }
-
-  const validTypes = ['grid', 'flex'];
-  if (config.type && !validTypes.includes(config.type)) {
-    throw new Error(`Invalid layout type: ${config.type}. Must be one of: ${validTypes.join(', ')}`);
-  }
-
-  return {
-    type: config.type || 'grid',
-    columns: config.columns || 12,
-    gap: config.gap || '1rem',
-    areas: config.areas || null,
-    items: config.items || [],
-    responsive: config.responsive !== false,
-    ...config
-  };
+export function resetClassCounter() {
+  classCounter = 0;
 }
 
 /**
- * Validates breakpoint configuration
- * @param {Object} breakpoint - Breakpoint to validate
- * @returns {boolean}
+ * Sanitizes a CSS value by ensuring proper units
+ * Adds 'px' suffix to numeric values, passes strings through unchanged
+ * @param {string|number} value - The value to sanitize
+ * @returns {string} Sanitized CSS value with appropriate units
+ * @example
+ * sanitizeValue(16);      // Returns '16px'
+ * sanitizeValue('2rem');  // Returns '2rem'
+ * sanitizeValue('100%');  // Returns '100%'
  */
-export function isValidBreakpoint(breakpoint) {
-  if (!breakpoint || typeof breakpoint !== 'object') {
-    return false;
+export function sanitizeValue(value) {
+  if (typeof value === 'number') {
+    return `${value}px`;
   }
-  if (typeof breakpoint.min !== 'number' && typeof breakpoint.max !== 'number') {
-    return false;
-  }
-  return true;
+  return String(value);
 }
 
 /**
- * Deep merges two objects
- * @param {Object} target - Target object
- * @param {Object} source - Source object
- * @returns {Object} Merged object
+ * Deep merges two objects, with source values overriding target values
+ * Creates a new object without mutating the inputs
+ * @param {Object} target - The base object with default values
+ * @param {Object} source - The object with override values
+ * @returns {Object} New merged object
+ * @example
+ * deepMerge({ a: 1, b: { c: 2 } }, { b: { d: 3 } });
+ * // Returns { a: 1, b: { c: 2, d: 3 } }
  */
 export function deepMerge(target, source) {
   const result = { ...target };
   
   for (const key in source) {
-    if (source.hasOwnProperty(key)) {
+    if (Object.prototype.hasOwnProperty.call(source, key)) {
       if (isPlainObject(source[key]) && isPlainObject(target[key])) {
         result[key] = deepMerge(target[key], source[key]);
-      } else {
+      } else if (source[key] !== undefined) {
         result[key] = source[key];
       }
     }
@@ -80,41 +75,77 @@ export function deepMerge(target, source) {
 }
 
 /**
- * Checks if value is a plain object
- * @param {*} value - Value to check
- * @returns {boolean}
+ * Checks if a value is a plain JavaScript object
+ * Returns false for null, arrays, and other non-plain objects
+ * @param {*} value - The value to check
+ * @returns {boolean} True if the value is a plain object
+ * @example
+ * isPlainObject({});           // Returns true
+ * isPlainObject({ a: 1 });     // Returns true
+ * isPlainObject([]);           // Returns false
+ * isPlainObject(null);         // Returns false
+ * isPlainObject(new Date());   // Returns false
  */
 export function isPlainObject(value) {
   return value !== null && typeof value === 'object' && !Array.isArray(value);
 }
 
 /**
- * Generates a unique ID for elements
- * @param {string} prefix - Prefix for the ID
- * @returns {string}
+ * Converts a camelCase string to kebab-case
+ * Used for converting JavaScript property names to CSS property names
+ * @param {string} str - The camelCase string to convert
+ * @returns {string} The kebab-case version of the string
+ * @example
+ * camelToKebab('backgroundColor');  // Returns 'background-color'
+ * camelToKebab('gridTemplateColumns'); // Returns 'grid-template-columns'
  */
-export function generateId(prefix = 'ls') {
-  return `${prefix}-${Math.random().toString(36).substr(2, 9)}`;
+export function camelToKebab(str) {
+  return str.replace(/([A-Z])/g, '-$1').toLowerCase();
 }
 
 /**
- * Converts camelCase to kebab-case
- * @param {string} str - String to convert
- * @returns {string}
+ * Debounces a function call
+ * Delays invoking the function until after wait milliseconds have elapsed
+ * since the last time the debounced function was invoked
+ * @param {Function} func - The function to debounce
+ * @param {number} wait - The number of milliseconds to delay
+ * @returns {Function} The debounced function
+ * @example
+ * const debouncedUpdate = debounce(() => updateLayout(), 100);
+ * window.addEventListener('resize', debouncedUpdate);
  */
-export function toKebabCase(str) {
-  return str.replace(/([a-z])([A-Z])/g, '$1-$2').toLowerCase();
+export function debounce(func, wait) {
+  let timeout;
+  
+  return function executedFunction(...args) {
+    const later = () => {
+      clearTimeout(timeout);
+      func.apply(this, args);
+    };
+    
+    clearTimeout(timeout);
+    timeout = setTimeout(later, wait);
+  };
 }
 
 /**
- * Sanitizes CSS value to prevent injection
- * @param {string} value - CSS value to sanitize
- * @returns {string}
+ * Creates a throttled function that only invokes at most once per wait period
+ * @param {Function} func - The function to throttle
+ * @param {number} wait - The number of milliseconds to throttle
+ * @returns {Function} The throttled function
+ * @example
+ * const throttledScroll = throttle(() => handleScroll(), 100);
+ * window.addEventListener('scroll', throttledScroll);
  */
-export function sanitizeCSSValue(value) {
-  if (typeof value !== 'string') {
-    return String(value);
-  }
-  // Remove potentially dangerous characters
-  return value.replace(/[;<>{}]/g, '');
+export function throttle(func, wait) {
+  let lastTime = 0;
+  
+  return function executedFunction(...args) {
+    const now = Date.now();
+    
+    if (now - lastTime >= wait) {
+      lastTime = now;
+      func.apply(this, args);
+    }
+  };
 }
