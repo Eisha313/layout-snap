@@ -1,175 +1,180 @@
 /**
- * CSS generators for Grid and Flexbox layouts
+ * CSS Grid and Flexbox layout generators
  */
 
-import { validateConfig, sanitizeCSSValue, toKebabCase } from './utils.js';
+import { sanitizeValue, clamp, isValidUnit } from './utils.js';
 
 /**
- * Generates CSS Grid styles from configuration
+ * Generate CSS Grid layout from configuration
  * @param {Object} config - Grid configuration
- * @returns {string} Generated CSS
+ * @returns {string} CSS string
  */
 export function generateGrid(config) {
-  const validated = validateConfig({ ...config, type: 'grid' });
-  const { columns, gap, areas, className = 'layout-grid' } = validated;
+  const {
+    columns = 12,
+    rows = 'auto',
+    gap = '1rem',
+    areas = null,
+    alignItems = 'stretch',
+    justifyItems = 'stretch',
+    className = 'grid-layout'
+  } = config;
+
+  const sanitizedClassName = sanitizeValue(className);
+  const sanitizedGap = isValidUnit(gap) ? gap : '1rem';
   
-  let css = `.${className} {\n`;
+  let css = `.${sanitizedClassName} {\n`;
   css += `  display: grid;\n`;
-  css += `  grid-template-columns: repeat(${sanitizeCSSValue(columns)}, 1fr);\n`;
-  css += `  gap: ${sanitizeCSSValue(gap)};\n`;
   
-  if (areas) {
-    const areasStr = areas.map(row => `"${sanitizeCSSValue(row)}"`).join('\n    ');
-    css += `  grid-template-areas:\n    ${areasStr};\n`;
+  // Handle columns - support both number and string formats
+  if (typeof columns === 'number') {
+    const clampedColumns = clamp(columns, 1, 24);
+    css += `  grid-template-columns: repeat(${clampedColumns}, 1fr);\n`;
+  } else if (typeof columns === 'string' && columns.trim()) {
+    css += `  grid-template-columns: ${columns};\n`;
+  } else {
+    css += `  grid-template-columns: repeat(12, 1fr);\n`;
+  }
+  
+  // Handle rows - support both number and string formats
+  if (typeof rows === 'number') {
+    const clampedRows = clamp(rows, 1, 24);
+    css += `  grid-template-rows: repeat(${clampedRows}, 1fr);\n`;
+  } else if (rows !== 'auto' && typeof rows === 'string' && rows.trim()) {
+    css += `  grid-template-rows: ${rows};\n`;
+  }
+  
+  css += `  gap: ${sanitizedGap};\n`;
+  
+  if (areas && Array.isArray(areas) && areas.length > 0) {
+    const validAreas = areas.filter(row => typeof row === 'string' && row.trim());
+    if (validAreas.length > 0) {
+      const areasStr = validAreas.map(row => `"${row}"`).join('\n    ');
+      css += `  grid-template-areas:\n    ${areasStr};\n`;
+    }
+  }
+  
+  if (alignItems !== 'stretch') {
+    css += `  align-items: ${alignItems};\n`;
+  }
+  
+  if (justifyItems !== 'stretch') {
+    css += `  justify-items: ${justifyItems};\n`;
   }
   
   css += `}\n`;
-  
-  // Generate item styles
-  if (validated.items && validated.items.length > 0) {
-    css += generateItemStyles(validated.items, className);
-  }
   
   return css;
 }
 
 /**
- * Generates CSS Flexbox styles from configuration
+ * Generate CSS Flexbox layout from configuration
  * @param {Object} config - Flexbox configuration
- * @returns {string} Generated CSS
+ * @returns {string} CSS string
  */
 export function generateFlex(config) {
-  const validated = validateConfig({ ...config, type: 'flex' });
-  const { 
-    direction = 'row', 
-    wrap = 'wrap', 
-    justify = 'flex-start', 
-    align = 'stretch',
-    gap,
-    className = 'layout-flex' 
-  } = validated;
+  const {
+    direction = 'row',
+    wrap = 'wrap',
+    gap = '1rem',
+    alignItems = 'stretch',
+    justifyContent = 'flex-start',
+    className = 'flex-layout'
+  } = config;
+
+  const sanitizedClassName = sanitizeValue(className);
+  const sanitizedGap = isValidUnit(gap) ? gap : '1rem';
   
-  let css = `.${className} {\n`;
+  const validDirections = ['row', 'row-reverse', 'column', 'column-reverse'];
+  const validWrap = ['nowrap', 'wrap', 'wrap-reverse'];
+  
+  const safeDirection = validDirections.includes(direction) ? direction : 'row';
+  const safeWrap = validWrap.includes(wrap) ? wrap : 'wrap';
+  
+  let css = `.${sanitizedClassName} {\n`;
   css += `  display: flex;\n`;
-  css += `  flex-direction: ${sanitizeCSSValue(direction)};\n`;
-  css += `  flex-wrap: ${sanitizeCSSValue(wrap)};\n`;
-  css += `  justify-content: ${sanitizeCSSValue(justify)};\n`;
-  css += `  align-items: ${sanitizeCSSValue(align)};\n`;
-  css += `  gap: ${sanitizeCSSValue(gap)};\n`;
+  css += `  flex-direction: ${safeDirection};\n`;
+  css += `  flex-wrap: ${safeWrap};\n`;
+  css += `  gap: ${sanitizedGap};\n`;
+  css += `  align-items: ${alignItems};\n`;
+  css += `  justify-content: ${justifyContent};\n`;
   css += `}\n`;
   
-  // Generate item styles
-  if (validated.items && validated.items.length > 0) {
-    css += generateFlexItemStyles(validated.items, className);
+  return css;
+}
+
+/**
+ * Generate child item styles for grid placement
+ * @param {Object} config - Item configuration
+ * @returns {string} CSS string
+ */
+export function generateGridItem(config) {
+  const {
+    className = 'grid-item',
+    colSpan = 1,
+    rowSpan = 1,
+    colStart = null,
+    rowStart = null,
+    area = null
+  } = config;
+
+  const sanitizedClassName = sanitizeValue(className);
+  
+  let css = `.${sanitizedClassName} {\n`;
+  
+  if (area && typeof area === 'string' && area.trim()) {
+    css += `  grid-area: ${area};\n`;
+  } else {
+    if (colStart !== null && typeof colStart === 'number' && colStart > 0) {
+      css += `  grid-column-start: ${colStart};\n`;
+    }
+    if (rowStart !== null && typeof rowStart === 'number' && rowStart > 0) {
+      css += `  grid-row-start: ${rowStart};\n`;
+    }
+    if (colSpan > 1) {
+      const clampedColSpan = clamp(colSpan, 1, 24);
+      css += `  grid-column: span ${clampedColSpan};\n`;
+    }
+    if (rowSpan > 1) {
+      const clampedRowSpan = clamp(rowSpan, 1, 24);
+      css += `  grid-row: span ${clampedRowSpan};\n`;
+    }
   }
   
-  return css;
-}
-
-/**
- * Generates styles for grid items
- * @param {Array} items - Item configurations
- * @param {string} parentClass - Parent class name
- * @returns {string} Generated CSS
- */
-function generateItemStyles(items, parentClass) {
-  let css = '';
-  
-  items.forEach((item, index) => {
-    const itemClass = item.className || `${parentClass}-item-${index + 1}`;
-    css += `\n.${itemClass} {\n`;
-    
-    if (item.area) {
-      css += `  grid-area: ${sanitizeCSSValue(item.area)};\n`;
-    }
-    if (item.column) {
-      css += `  grid-column: ${sanitizeCSSValue(item.column)};\n`;
-    }
-    if (item.row) {
-      css += `  grid-row: ${sanitizeCSSValue(item.row)};\n`;
-    }
-    
-    // Add custom styles
-    if (item.styles) {
-      css += generateCustomStyles(item.styles);
-    }
-    
-    css += `}\n`;
-  });
+  css += `}\n`;
   
   return css;
 }
 
 /**
- * Generates styles for flex items
- * @param {Array} items - Item configurations
- * @param {string} parentClass - Parent class name
- * @returns {string} Generated CSS
+ * Generate flex item styles
+ * @param {Object} config - Item configuration
+ * @returns {string} CSS string
  */
-function generateFlexItemStyles(items, parentClass) {
-  let css = '';
-  
-  items.forEach((item, index) => {
-    const itemClass = item.className || `${parentClass}-item-${index + 1}`;
-    css += `\n.${itemClass} {\n`;
-    
-    if (item.flex) {
-      css += `  flex: ${sanitizeCSSValue(item.flex)};\n`;
-    }
-    if (item.basis) {
-      css += `  flex-basis: ${sanitizeCSSValue(item.basis)};\n`;
-    }
-    if (item.grow !== undefined) {
-      css += `  flex-grow: ${sanitizeCSSValue(item.grow)};\n`;
-    }
-    if (item.shrink !== undefined) {
-      css += `  flex-shrink: ${sanitizeCSSValue(item.shrink)};\n`;
-    }
-    if (item.order !== undefined) {
-      css += `  order: ${sanitizeCSSValue(item.order)};\n`;
-    }
-    
-    // Add custom styles
-    if (item.styles) {
-      css += generateCustomStyles(item.styles);
-    }
-    
-    css += `}\n`;
-  });
-  
-  return css;
-}
+export function generateFlexItem(config) {
+  const {
+    className = 'flex-item',
+    grow = 0,
+    shrink = 1,
+    basis = 'auto',
+    alignSelf = null,
+    order = null
+  } = config;
 
-/**
- * Generates custom CSS properties from an object
- * @param {Object} styles - Style object
- * @returns {string} Generated CSS properties
- */
-function generateCustomStyles(styles) {
-  let css = '';
+  const sanitizedClassName = sanitizeValue(className);
   
-  for (const [prop, value] of Object.entries(styles)) {
-    const cssProp = toKebabCase(prop);
-    css += `  ${cssProp}: ${sanitizeCSSValue(value)};\n`;
+  let css = `.${sanitizedClassName} {\n`;
+  css += `  flex: ${grow} ${shrink} ${basis};\n`;
+  
+  if (alignSelf) {
+    css += `  align-self: ${alignSelf};\n`;
   }
   
-  return css;
-}
-
-/**
- * Main generator function that routes to appropriate generator
- * @param {Object} config - Layout configuration
- * @returns {string} Generated CSS
- */
-export function generate(config) {
-  const validated = validateConfig(config);
-  
-  switch (validated.type) {
-    case 'grid':
-      return generateGrid(validated);
-    case 'flex':
-      return generateFlex(validated);
-    default:
-      throw new Error(`Unknown layout type: ${validated.type}`);
+  if (order !== null && typeof order === 'number') {
+    css += `  order: ${order};\n`;
   }
+  
+  css += `}\n`;
+  
+  return css;
 }

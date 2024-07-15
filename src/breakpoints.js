@@ -1,8 +1,13 @@
 /**
- * Breakpoint utilities for responsive layout generation
+ * Responsive breakpoint management and media query generation
  */
 
-const DEFAULT_BREAKPOINTS = {
+import { generateGrid, generateFlex } from './generators.js';
+
+/**
+ * Default breakpoint definitions
+ */
+export const defaultBreakpoints = {
   xs: 0,
   sm: 576,
   md: 768,
@@ -12,145 +17,117 @@ const DEFAULT_BREAKPOINTS = {
 };
 
 /**
- * Validate breakpoint configuration
+ * Generate media query wrapper
+ * @param {string} breakpoint - Breakpoint name
+ * @param {string} css - CSS content
  * @param {Object} breakpoints - Breakpoint definitions
- * @returns {boolean} - Whether breakpoints are valid
+ * @returns {string} Media query wrapped CSS
  */
-function validateBreakpoints(breakpoints) {
-  if (!breakpoints || typeof breakpoints !== 'object') {
-    return false;
+export function wrapInMediaQuery(breakpoint, css, breakpoints = defaultBreakpoints) {
+  const minWidth = breakpoints[breakpoint];
+  
+  if (minWidth === undefined) {
+    console.warn(`Unknown breakpoint: ${breakpoint}`);
+    return css;
   }
   
-  const values = Object.values(breakpoints);
-  return values.every(v => typeof v === 'number' && v >= 0 && Number.isFinite(v));
+  // For the smallest breakpoint (0), don't wrap in media query
+  if (minWidth === 0) {
+    return css;
+  }
+  
+  return `@media (min-width: ${minWidth}px) {\n${css}}\n`;
 }
 
 /**
- * Merge custom breakpoints with defaults
- * @param {Object} custom - Custom breakpoint definitions
- * @returns {Object} - Merged breakpoints
+ * Generate responsive layout with multiple breakpoints
+ * @param {Object} config - Layout configuration with breakpoint overrides
+ * @returns {string} Complete responsive CSS
  */
-function mergeBreakpoints(custom = {}) {
-  if (!validateBreakpoints(custom)) {
-    return { ...DEFAULT_BREAKPOINTS };
-  }
-  return { ...DEFAULT_BREAKPOINTS, ...custom };
-}
+export function generateResponsiveLayout(config) {
+  const {
+    type = 'grid',
+    base = {},
+    responsive = {},
+    breakpoints = defaultBreakpoints
+  } = config;
 
-/**
- * Sort breakpoints by value in ascending order for mobile-first approach
- * @param {Object} breakpoints - Breakpoint definitions
- * @returns {Array} - Sorted array of [name, value] pairs
- */
-function sortBreakpoints(breakpoints) {
-  return Object.entries(breakpoints)
-    .filter(([, value]) => typeof value === 'number' && Number.isFinite(value))
-    .sort((a, b) => a[1] - b[1]);
-}
-
-/**
- * Generate media query string for a breakpoint
- * @param {number} minWidth - Minimum width in pixels
- * @param {number|null} maxWidth - Maximum width in pixels (optional)
- * @returns {string} - Media query string
- */
-function generateMediaQuery(minWidth, maxWidth = null) {
-  if (minWidth === 0 && maxWidth === null) {
-    return ''; // Base styles, no media query needed
-  }
+  const generator = type === 'flex' ? generateFlex : generateGrid;
+  let css = '';
   
-  if (minWidth === 0 && maxWidth !== null) {
-    return `@media (max-width: ${maxWidth - 0.02}px)`;
-  }
+  // Generate base styles (mobile-first, no media query)
+  css += generator(base);
   
-  if (maxWidth === null) {
-    return `@media (min-width: ${minWidth}px)`;
-  }
+  // Sort breakpoints by min-width to ensure proper cascade
+  const sortedBreakpoints = Object.entries(breakpoints)
+    .sort(([, a], [, b]) => a - b)
+    .map(([name]) => name);
   
-  return `@media (min-width: ${minWidth}px) and (max-width: ${maxWidth - 0.02}px)`;
-}
-
-/**
- * Generate responsive CSS with proper cascade order
- * @param {Object} config - Layout configuration with responsive settings
- * @param {Function} cssGenerator - Function that generates CSS for given config
- * @param {Object} customBreakpoints - Custom breakpoint definitions
- * @returns {string} - Complete responsive CSS
- */
-function generateResponsiveCSS(config, cssGenerator, customBreakpoints = {}) {
-  const breakpoints = mergeBreakpoints(customBreakpoints);
-  const sortedBreakpoints = sortBreakpoints(breakpoints);
-  const cssBlocks = [];
-  
-  // Generate base CSS (mobile-first)
-  const baseCSS = cssGenerator(config.base || config);
-  if (baseCSS && baseCSS.trim()) {
-    cssBlocks.push(baseCSS);
-  }
-  
-  // Generate responsive overrides in ascending order (mobile-first)
-  if (config.responsive) {
-    const responsiveKeys = Object.keys(config.responsive);
-    
-    // Sort responsive config keys by breakpoint value
-    const sortedResponsiveKeys = responsiveKeys
-      .filter(key => breakpoints[key] !== undefined)
-      .sort((a, b) => breakpoints[a] - breakpoints[b]);
-    
-    for (const breakpointName of sortedResponsiveKeys) {
-      const breakpointValue = breakpoints[breakpointName];
-      const responsiveConfig = config.responsive[breakpointName];
+  // Generate responsive overrides in order of breakpoint size
+  for (const breakpoint of sortedBreakpoints) {
+    if (responsive[breakpoint]) {
+      const mergedConfig = { ...base, ...responsive[breakpoint] };
+      const breakpointCss = generator(mergedConfig);
+      const minWidth = breakpoints[breakpoint];
       
-      // Skip base breakpoint (0px) as it's already handled
-      if (breakpointValue === 0) {
-        continue;
-      }
-      
-      const mediaQuery = generateMediaQuery(breakpointValue);
-      const responsiveCSS = cssGenerator(responsiveConfig);
-      
-      if (responsiveCSS && responsiveCSS.trim() && mediaQuery) {
-        cssBlocks.push(`${mediaQuery} {\n${responsiveCSS}\n}`);
+      // Skip wrapping for 0-width breakpoints (already covered by base)
+      if (minWidth > 0) {
+        css += wrapInMediaQuery(breakpoint, breakpointCss, breakpoints);
       }
     }
   }
   
-  return cssBlocks.join('\n\n');
+  return css;
 }
 
 /**
- * Get the active breakpoint for a given width
- * @param {number} width - Current viewport width
- * @param {Object} customBreakpoints - Custom breakpoint definitions
- * @returns {string} - Name of the active breakpoint
+ * Inject CSS into document with proper style element management
+ * @param {string} css - CSS to inject
+ * @param {string} id - Style element ID
+ * @returns {HTMLStyleElement} The style element
  */
-function getActiveBreakpoint(width, customBreakpoints = {}) {
-  if (typeof width !== 'number' || width < 0 || !Number.isFinite(width)) {
-    return 'xs';
+export function injectStyles(css, id = 'layout-snap-styles') {
+  if (typeof document === 'undefined') {
+    return null;
   }
   
-  const breakpoints = mergeBreakpoints(customBreakpoints);
-  const sorted = sortBreakpoints(breakpoints);
+  let styleEl = document.getElementById(id);
   
-  let active = sorted[0]?.[0] || 'xs';
-  
-  for (const [name, value] of sorted) {
-    if (width >= value) {
-      active = name;
-    } else {
-      break;
-    }
+  if (!styleEl) {
+    styleEl = document.createElement('style');
+    styleEl.id = id;
+    styleEl.setAttribute('data-layout-snap', 'true');
+    
+    // Insert at the end of head to ensure higher specificity
+    const head = document.head || document.getElementsByTagName('head')[0];
+    head.appendChild(styleEl);
   }
   
-  return active;
+  styleEl.textContent = css;
+  
+  return styleEl;
 }
 
-module.exports = {
-  DEFAULT_BREAKPOINTS,
-  validateBreakpoints,
-  mergeBreakpoints,
-  sortBreakpoints,
-  generateMediaQuery,
-  generateResponsiveCSS,
-  getActiveBreakpoint
-};
+/**
+ * Remove injected styles
+ * @param {string} id - Style element ID
+ */
+export function removeStyles(id = 'layout-snap-styles') {
+  if (typeof document === 'undefined') {
+    return;
+  }
+  
+  const styleEl = document.getElementById(id);
+  if (styleEl) {
+    styleEl.remove();
+  }
+}
+
+/**
+ * Create custom breakpoint set
+ * @param {Object} customBreakpoints - Custom breakpoint definitions
+ * @returns {Object} Merged breakpoints
+ */
+export function createBreakpoints(customBreakpoints) {
+  return { ...defaultBreakpoints, ...customBreakpoints };
+}
