@@ -1,48 +1,65 @@
 /**
- * layout-snap
- * A lightweight JavaScript library for generating responsive CSS Grid and Flexbox layouts
+ * layout-snap - A lightweight JavaScript library for generating responsive CSS Grid and Flexbox layouts
  */
 
-import { generateGridCSS, generateFlexboxCSS, generateLayoutCSS } from './generators.js';
-import { presets, getPreset, registerPreset } from './presets.js';
-import { createBreakpoints, injectBreakpoints, defaultBreakpoints } from './breakpoints.js';
-import { createPreview, quickPreview, LivePreview } from './preview.js';
+import { generateGridCSS, generateFlexCSS, generateLayout } from './generators.js';
+import { getPreset, listPresets, PRESETS } from './presets.js';
+import { generateResponsiveCSS, createMediaQuery, DEFAULT_BREAKPOINTS } from './breakpoints.js';
+import { createPreview, destroyPreview, updatePreview } from './preview.js';
+import { createHotReload, watchConfig } from './hot-reload.js';
+import { mergeConfig, generateClassName, cssToObject, objectToCSS } from './utils.js';
 
 // Main API
 export {
-  // Generators
+  // Core generators
   generateGridCSS,
-  generateFlexboxCSS,
-  generateLayoutCSS,
+  generateFlexCSS,
+  generateLayout,
   
   // Presets
-  presets,
   getPreset,
-  registerPreset,
+  listPresets,
+  PRESETS,
   
-  // Breakpoints
-  createBreakpoints,
-  injectBreakpoints,
-  defaultBreakpoints,
+  // Responsive utilities
+  generateResponsiveCSS,
+  createMediaQuery,
+  DEFAULT_BREAKPOINTS,
   
-  // Live Preview
+  // Preview mode
   createPreview,
-  quickPreview,
-  LivePreview
+  destroyPreview,
+  updatePreview,
+  
+  // Hot reload
+  createHotReload,
+  watchConfig,
+  
+  // Utilities
+  mergeConfig,
+  generateClassName,
+  cssToObject,
+  objectToCSS
 };
 
-// Default export with all utilities
+// Default export with all functionality
 export default {
   generateGridCSS,
-  generateFlexboxCSS,
-  generateLayoutCSS,
-  presets,
+  generateFlexCSS,
+  generateLayout,
   getPreset,
-  registerPreset,
-  createBreakpoints,
-  injectBreakpoints,
-  defaultBreakpoints,
+  listPresets,
+  PRESETS,
+  generateResponsiveCSS,
+  createMediaQuery,
+  DEFAULT_BREAKPOINTS,
   createPreview,
-  quickPreview,
-  LivePreview
+  destroyPreview,
+  updatePreview,
+  createHotReload,
+  watchConfig,
+  mergeConfig,
+  generateClassName,
+  cssToObject,
+  objectToCSS
 };
