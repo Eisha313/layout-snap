@@ -1,93 +1,151 @@
-# layout-snap
+# Layout-Snap
 
-A lightweight JavaScript library for generating responsive CSS Grid and Flexbox layouts from simple configuration objects. Simplifies complex responsive layouts into reusable, configurable functions.
+[![npm version](https://badge.fury.io/js/layout-snap.svg)](https://www.npmjs.com/package/layout-snap)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+
+A lightweight JavaScript library for generating responsive CSS Grid and Flexbox layouts from simple configuration objects.
+
+## Features
+
+- 📦 **Configuration-based** - Generate layouts from simple JavaScript objects
+- 🎨 **Preset patterns** - Ready-to-use hero sections, feature grids, and pricing tables
+- 📱 **Auto-responsive** - Built-in breakpoint system with customizable media queries
+- 🔥 **Live preview** - Render layouts directly with hot-reload support
+- 🪶 **Lightweight** - Zero dependencies, under 10KB gzipped
 
 ## Installation
 
 ```bash
-npm install
+npm install layout-snap
 ```
 
-## Usage
-
-### Basic Layout Generation
+## Quick Start
 
 ```javascript
-import { LayoutSnap, createLayout, PRESETS } from 'layout-snap';
+import { generateLayout, presets } from 'layout-snap';
 
-// Quick generation with factory function
-const { html, css } = createLayout({
+// Generate a responsive feature grid
+const css = generateLayout(presets.featureGrid({
+  columns: 3,
+  gap: '2rem'
+}));
+
+// Inject CSS
+const style = document.createElement('style');
+style.textContent = css;
+document.head.appendChild(style);
+```
+
+## Basic Usage
+
+### Grid Layout
+
+```javascript
+import { generateLayout } from 'layout-snap';
+
+const gridCSS = generateLayout({
   type: 'grid',
-  columns: 'repeat(3, 1fr)',
-  gap: '1rem',
-  items: [
-    { content: 'Item 1' },
-    { content: 'Item 2' },
-    { content: 'Item 3' }
-  ]
+  container: '.my-grid',
+  columns: 3,
+  gap: '20px'
+});
+```
+
+### Flexbox Layout
+
+```javascript
+import { generateLayout } from 'layout-snap';
+
+const flexCSS = generateLayout({
+  type: 'flex',
+  container: '.my-flex',
+  direction: 'row',
+  justify: 'space-between',
+  align: 'center'
 });
 ```
 
 ### Using Presets
 
 ```javascript
-const snap = new LayoutSnap();
+import { generateLayout, presets } from 'layout-snap';
 
-// Use a preset layout
-const { html, css } = snap.generate({ preset: 'featureGrid' });
+// Hero section
+const heroCSS = generateLayout(presets.hero());
 
-// Available presets: heroSection, featureGrid, pricingTable, twoColumn, cardGrid, navbar
+// Feature grid
+const featuresCSS = generateLayout(presets.featureGrid({ columns: 4 }));
+
+// Pricing table
+const pricingCSS = generateLayout(presets.pricingTable());
+```
+
+### Responsive Layouts
+
+```javascript
+import { createResponsiveLayout } from 'layout-snap';
+
+const responsiveCSS = createResponsiveLayout(
+  {
+    type: 'grid',
+    container: '.cards',
+    columns: 4,
+    gap: '20px'
+  },
+  {
+    tablet: { maxWidth: 1024, config: { columns: 2 } },
+    mobile: { maxWidth: 640, config: { columns: 1 } }
+  }
+);
 ```
 
 ### Live Preview with Hot Reload
 
 ```javascript
-const snap = new LayoutSnap({ hotReload: true });
+import { createPreview, enableHotReload } from 'layout-snap';
 
-// Render directly into a container
-snap.render({
-  preset: 'pricingTable',
-  gap: '2rem'
-}, '#app');
-
-// Update layout dynamically
-snap.update({ gap: '3rem' });
-```
-
-### Custom Responsive Breakpoints
-
-```javascript
-const snap = new LayoutSnap({
-  breakpoints: {
-    mobile: 480,
-    tablet: 768,
-    desktop: 1024,
-    wide: 1440
-  }
-});
-
-const { html, css } = snap.generate({
+const preview = createPreview('#preview-container', {
   type: 'grid',
-  columns: 'repeat(4, 1fr)',
-  responsive: {
-    tablet: { gridTemplateColumns: 'repeat(2, 1fr)' },
-    mobile: { gridTemplateColumns: '1fr' }
-  },
-  items: [{ content: 'A' }, { content: 'B' }, { content: 'C' }, { content: 'D' }]
+  container: '.grid',
+  columns: 3
 });
+
+const hotReload = enableHotReload(preview);
+
+// Update on changes
+hotReload.update({ columns: 4 });
 ```
 
-## API
+## Documentation
 
-### `new LayoutSnap(options)`
-- `breakpoints` - Custom responsive breakpoints
-- `prefix` - CSS class prefix (default: 'ls')
-- `hotReload` - Enable live preview updates
+- [API Documentation](./docs/API.md)
+- [Examples](./docs/EXAMPLES.md)
 
-### `snap.generate(config)` → `{ html, css, className }`
-### `snap.render(config, target)` → Renders into DOM
-### `snap.update(newConfig)` → Hot reload with new config
+## Browser Support
+
+- Chrome 57+
+- Firefox 52+
+- Safari 10.1+
+- Edge 16+
+
+## Contributing
+
+Contributions are welcome! Please read our contributing guidelines before submitting a PR.
+
+```bash
+# Clone the repo
+git clone https://github.com/example/layout-snap.git
+
+# Install dependencies
+npm install
+
+# Run tests
+npm test
+
+# Build
+npm run build
+```
 
 ## License
 
-MIT
+MIT © Layout-Snap Contributors
